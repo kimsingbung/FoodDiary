@@ -1,0 +1,46 @@
+rules_version = '2';
+
+// Firebase 콘솔 → Firestore Database → 규칙 탭에 이 내용을 그대로 붙여넣고 "게시"하세요.
+// 아래 목록에 있는 구글 계정만 사이트의 데이터를 읽고 쓸 수 있습니다.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function allowed() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email in [
+          'me@gmail.com',       // ← 내 구글 이메일로 바꾸기
+          'friend@gmail.com'    // ← 같이 쓸 사람 구글 이메일로 바꾸기
+        ];
+    }
+
+    match /meals/{mealId} {
+      allow read: if allowed();
+      allow create: if allowed() && request.resource.data.uid == request.auth.uid;
+      // 작성자는 전부 수정 가능, 상대는 좋아요/댓글 수만 바꿀 수 있음
+      allow update: if allowed() && (
+        (resource.data.uid == request.auth.uid && request.resource.data.uid == request.auth.uid)
+        || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'commentCount'])
+      );
+      allow delete: if allowed() && resource.data.uid == request.auth.uid;
+
+      match /comments/{commentId} {
+        allow read: if allowed();
+        allow create: if allowed() && request.resource.data.uid == request.auth.uid;
+        // 댓글 작성자 또는 글 작성자가 삭제 가능
+        allow delete: if allowed() && (
+          resource.data.uid == request.auth.uid
+          || get(/databases/$(database)/documents/meals/$(mealId)).data.uid == request.auth.uid
+        );
+      }
+    }
+
+    match /photos/{mealId} {
+      allow read: if allowed();
+      allow create: if allowed() && request.resource.data.uid == request.auth.uid;
+      allow update: if allowed() && resource.data.uid == request.auth.uid
+        && request.resource.data.uid == request.auth.uid;
+      allow delete: if allowed() && (resource == null || resource.data.uid == request.auth.uid);
+    }
+  }
+}
