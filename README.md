@@ -34,10 +34,10 @@
 - 두 곳의 사람이 같아야 합니다.
 
 ### 4. GitHub Pages로 배포
-1. GitHub(kimsingbung)에서 새 저장소 `food-diary` 생성 (**Public**. 무료 계정의 Private 저장소는 Pages를 쓸 수 없어요)
+1. GitHub(kimsingbung)에서 새 저장소 `FoodDiary` 생성 (**Public**. 무료 계정의 Private 저장소는 Pages를 쓸 수 없어요)
 2. 이 폴더를 push
 3. 저장소 **Settings → Pages** → Source: `Deploy from a branch`, Branch: `main` / `(root)` → Save
-4. 1~2분 뒤 `https://kimsingbung.github.io/food-diary/` 로 접속
+4. 1~2분 뒤 `https://kimsingbung.github.io/FoodDiary/` 로 접속
 5. Firebase 콘솔 → Authentication → **설정 → 승인된 도메인**에 `kimsingbung.github.io` 추가
 
 이후로는 수정해서 push하면 사이트가 자동으로 갱신됩니다.

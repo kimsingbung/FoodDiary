@@ -9,7 +9,7 @@ export const firebaseConfig = {
 };
 
 // ② 카카오 개발자 콘솔 → 내 애플리케이션 → 앱 키의 "JavaScript 키"
-export const KAKAO_JS_KEY = "YOUR_KAKAO_JAVASCRIPT_KEY";
+export const KAKAO_JS_KEY = "dc65dc9bcde2f3de697e0dcfc8b5ad6b";
 
 // ③ 들어올 수 있는 사람. 공개 저장소에 이메일이 드러나지 않도록 "소문자 이메일의 SHA-256 해시"를 키로 씁니다.
 //    해시 구하기 (PowerShell):
