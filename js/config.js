@@ -18,7 +18,7 @@ export const KAKAO_JS_KEY = "YOUR_KAKAO_JAVASCRIPT_KEY";
 //    실제 접근 제한은 Firestore 규칙(private/firestore.rules)이 담당하니 두 곳을 함께 맞춰주세요.
 export const MEMBERS = {
   "37815a655aa847b9ee3981b279192e8b81afbc348b5de29da9bfb97530f1d436": { id: "a", name: "유미", color: "#e5677f" },
-  "c15a2d9e7a47f429606859e8b8fa7656197646ff25344dc55a063e876390bcdb": { id: "b", name: "거니", color: "#3d86d4" },
+  "182a148e986f3b7a59ba61bc19967ec9aaf062372adf8f2d6155f834d8517649": { id: "b", name: "거니", color: "#e0a100" },
 };
 
 // 이 값들은 공개되어도 괜찮습니다. 데이터는 Firestore 규칙이, 지도 키는 카카오 도메인 등록이 보호합니다.
