@@ -1,7 +1,8 @@
 rules_version = '2';
 
 // Firebase 콘솔 → Firestore Database → 규칙 탭에 이 내용을 그대로 붙여넣고 "게시"하세요.
-// members() 에 있는 구글 계정만 데이터를 읽고 쓸 수 있습니다. (js/config.js 의 MEMBERS 와 똑같이)
+// members() 에 있는 구글 계정만 데이터를 읽고 쓸 수 있습니다. (js/config.js 의 MEMBERS 와 같은 사람)
+// 실제 이메일이 들어간 규칙은 private/firestore.rules 에 따로 보관합니다 (GitHub에 올라가지 않음).
 service cloud.firestore {
   match /databases/{database}/documents {
 

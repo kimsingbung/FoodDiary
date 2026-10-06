@@ -116,13 +116,18 @@ function deny(email, extra = "") {
   show("denied-screen");
 }
 
-onAuthStateChanged(auth, (user) => {
+async function sha256(text) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+onAuthStateChanged(auth, async (user) => {
   state.unsubs.forEach((u) => u());
   state.unsubs = [];
   me = null;
   if (!user) return show("login-screen");
 
-  const member = MEMBERS[(user.email ?? "").toLowerCase()];
+  const member = MEMBERS[await sha256((user.email ?? "").toLowerCase())];
   if (!member) return deny(user.email);
   me = { ...member, uid: user.uid, email: user.email };
   $("#me-btn").innerHTML = avatar(me);

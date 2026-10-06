@@ -29,8 +29,9 @@
 4. **제품 설정 → 카카오맵** → 사용 설정 **ON** (새로 만든 앱은 이걸 켜야 지도가 나와요)
 
 ### 3. 들어올 사람 지정
-[`js/config.js`](js/config.js) ③의 `MEMBERS`에 두 사람의 구글 이메일, 표시 이름, 색깔을 적어요.
-**firestore.rules의 이메일 목록과 똑같아야** 합니다.
+- [`js/config.js`](js/config.js) ③의 `MEMBERS`: 공개 저장소에 이메일이 드러나지 않도록 **이메일의 SHA-256 해시**와 표시 이름, 색깔을 적어요 (해시 구하는 명령은 파일 안에 있어요).
+- 실제 이메일이 들어간 Firestore 규칙은 `private/firestore.rules`에 보관해요. 이 폴더는 `.gitignore`로 GitHub에 올라가지 않아요.
+- 두 곳의 사람이 같아야 합니다.
 
 ### 4. GitHub Pages로 배포
 1. GitHub(kimsingbung)에서 새 저장소 `food-diary` 생성 (**Public**. 무료 계정의 Private 저장소는 Pages를 쓸 수 없어요)
