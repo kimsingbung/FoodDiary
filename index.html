@@ -60,6 +60,7 @@
     <section id="map-view" class="view">
       <div id="map"></div>
       <div id="map-summary" class="map-summary"></div>
+      <button id="map-locate" class="locate-btn" aria-label="내 위치로 이동">◎</button>
       <div id="map-empty" class="map-empty hidden">아직 기록한 맛집이 없어요<br><b>+</b> 버튼으로 첫 맛집을 남겨보세요 🍜</div>
     </section>
 
@@ -99,6 +100,10 @@
             <input id="place-q" placeholder="가게 이름 검색 (예: 을지로 노가리)" enterkeyhint="search" autocomplete="off">
             <button type="button" id="place-go" class="btn small">검색</button>
           </div>
+          <div class="place-tools">
+            <button type="button" id="place-near" class="chip">📍 내 주변 가게</button>
+            <button type="button" id="place-pick" class="chip">🗺️ 지도에서 직접 찍기</button>
+          </div>
           <div id="place-results" class="place-results"></div>
         </div>
       </div>
@@ -123,6 +128,30 @@
         <button type="submit" id="form-save" class="btn primary">저장</button>
       </div>
     </form>
+  </dialog>
+
+  <!-- 지도에서 직접 위치 찍기 -->
+  <dialog id="picker-dialog">
+    <div class="sheet">
+      <button type="button" class="close-x" data-close aria-label="닫기">✕</button>
+      <h2>지도에서 위치 찍기</h2>
+      <div class="search-row">
+        <input id="pk-q" placeholder="주소·지역·상호로 지도 이동 (예: 망원동 412)" enterkeyhint="search" autocomplete="off">
+        <button type="button" id="pk-go" class="btn small">이동</button>
+      </div>
+      <div class="picker-map-wrap">
+        <div id="picker-map"></div>
+        <div class="crosshair" aria-hidden="true">📍</div>
+        <button type="button" id="pk-locate" class="locate-btn" aria-label="내 위치로 이동">◎</button>
+      </div>
+      <p class="muted small">지도를 움직여서 핀을 정확한 위치에 맞춰주세요</p>
+      <div id="pk-addr" class="pk-addr"></div>
+      <label>가게 이름 <input id="pk-name" maxlength="40" placeholder="예: 망원시장 꽈배기 노점" autocomplete="off"></label>
+      <div class="form-actions">
+        <button type="button" class="btn" data-close>취소</button>
+        <button type="button" id="pk-ok" class="btn primary">이 위치로 선택</button>
+      </div>
+    </div>
   </dialog>
 
   <dialog id="visit-dialog"></dialog>

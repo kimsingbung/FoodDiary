@@ -251,6 +251,22 @@ async function showMap() {
   }
 }
 
+let myDot = null;
+$("#map-locate").onclick = async () => {
+  if (!map) return;
+  try {
+    const { lat, lng } = await getMyLocation();
+    const pos = new kakao.maps.LatLng(lat, lng);
+    myDot ??= new kakao.maps.CustomOverlay({ content: `<div class="my-dot"></div>`, zIndex: 5 });
+    myDot.setPosition(pos);
+    myDot.setMap(map);
+    map.setLevel(4);
+    map.panTo(pos);
+  } catch (e) {
+    toast(e.message);
+  }
+};
+
 function renderMap(fit) {
   if (!map) return;
   overlays.forEach((o) => o.setMap(null));
@@ -581,6 +597,7 @@ function applyExif(exif) {
     $("#f-date").value = exif.date;
     hints.push("📅 촬영 날짜로 설정");
   }
+  if (exif.lat) f.exifPos = { lat: exif.lat, lng: exif.lng };
   if (exif.lat && !f.place) {
     searchNearby(exif.lat, exif.lng);
     hints.push("📍 찍은 곳 근처 가게 추천");
@@ -628,18 +645,128 @@ async function searchPlaces() {
   showResults([
     ...(ours.length ? [{ title: "💛 우리가 간 곳" }, ...ours] : []),
     ...(found.length ? [{ title: "🔎 검색 결과" }, ...found] : []),
-  ], "검색 결과가 없어요. 지역명을 같이 넣어보세요 (예: 성수 카페)");
+  ], "검색 결과가 없어요. 지역명을 같이 넣거나 (예: 성수 카페) '지도에서 직접 찍기'를 써보세요");
 }
 
-async function searchNearby(lat, lng) {
+async function searchNearby(lat, lng, title = "📷 사진 찍은 곳 근처", radius = 200) {
   try {
     await kakaoReady;
   } catch { return; }
-  const opts = { location: new kakao.maps.LatLng(lat, lng), radius: 200, sort: kakao.maps.services.SortBy.DISTANCE };
+  const opts = { location: new kakao.maps.LatLng(lat, lng), radius, sort: kakao.maps.services.SortBy.DISTANCE };
   const [food, cafe] = await Promise.all([kakaoSearch("categorySearch", "FD6", opts), kakaoSearch("categorySearch", "CE7", opts)]);
-  const list = [...food, ...cafe].map(fromKakao).sort((a, b) => a.distance - b.distance).slice(0, 8);
-  if (state.form && !state.form.place && list.length) showResults([{ title: "📷 사진 찍은 곳 근처" }, ...list], "");
+  const found = [...food, ...cafe].map(fromKakao).sort((a, b) => a.distance - b.distance).slice(0, 15);
+  // 이미 기록한 가게는 우리 데이터(평점 포함)로 보여준다
+  const list = found.map((p) => (state.places.has(p.id) ? { ...state.places.get(p.id), distance: p.distance } : p));
+  if (state.form && !state.form.place) {
+    showResults(list.length ? [{ title }, ...list] : [], "근처에 검색되는 가게가 없어요. '지도에서 직접 찍기'를 써보세요");
+  }
 }
+
+// 현재 위치 (iPhone은 처음에 위치 권한을 물어봐요)
+function getMyLocation() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) return reject(new Error("이 브라우저는 위치 기능을 지원하지 않아요"));
+    navigator.geolocation.getCurrentPosition(
+      (p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude }),
+      (e) => reject(new Error(e.code === 1
+        ? "위치 권한이 꺼져 있어요. 설정 → 개인정보 보호 → 위치 서비스 → Safari 웹 사이트에서 허용해 주세요"
+        : "현재 위치를 찾지 못했어요. 잠시 후 다시 시도해 주세요")),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
+    );
+  });
+}
+
+$("#place-near").onclick = async () => {
+  $("#place-results").innerHTML = `<p class="muted small">현재 위치 확인 중…</p>`;
+  try {
+    const { lat, lng } = await getMyLocation();
+    await searchNearby(lat, lng, "📍 내 주변 (가까운 순)", 500);
+  } catch (e) {
+    $("#place-results").innerHTML = "";
+    toast(e.message);
+  }
+};
+
+/* ----- 지도에서 직접 위치 찍기 ----- */
+
+const pickerDialog = $("#picker-dialog");
+let pickerMap = null;
+
+async function openPicker() {
+  try { await kakaoReady; } catch (e) { return toast(e.message); }
+  $("#pk-q").value = $("#place-q").value.trim();
+  $("#pk-name").value = $("#place-q").value.trim();
+  $("#pk-addr").textContent = "";
+  pickerDialog.showModal();
+
+  const start = state.form?.exifPos
+    ? new kakao.maps.LatLng(state.form.exifPos.lat, state.form.exifPos.lng)
+    : map ? map.getCenter() : new kakao.maps.LatLng(37.5665, 126.978);
+  if (!pickerMap) {
+    pickerMap = new kakao.maps.Map($("#picker-map"), { center: start, level: 3 });
+    kakao.maps.event.addListener(pickerMap, "idle", updatePickerAddress);
+  } else {
+    pickerMap.relayout();
+    pickerMap.setCenter(start);
+    pickerMap.setLevel(3);
+  }
+  updatePickerAddress();
+  if ($("#pk-q").value) pickerGo();
+}
+
+function updatePickerAddress() {
+  const c = pickerMap.getCenter();
+  new kakao.maps.services.Geocoder().coord2Address(c.getLng(), c.getLat(), (res, status) => {
+    const r = status === kakao.maps.services.Status.OK ? res[0] : null;
+    pickerDialog.dataset.road = r?.road_address?.address_name ?? "";
+    pickerDialog.dataset.addr = r?.address?.address_name ?? "";
+    $("#pk-addr").textContent = r ? `📍 ${pickerDialog.dataset.road || pickerDialog.dataset.addr}` : "📍 주소 정보가 없는 위치예요";
+  });
+}
+
+// 주소로 먼저 찾고, 없으면 상호·장소 이름으로 찾아서 지도를 옮긴다
+async function pickerGo() {
+  const q = $("#pk-q").value.trim();
+  if (!q) return;
+  const byAddress = await new Promise((res) => new kakao.maps.services.Geocoder().addressSearch(q,
+    (data, status) => res(status === kakao.maps.services.Status.OK ? data[0] : null)));
+  const hit = byAddress ?? (await kakaoSearch("keywordSearch", q, { size: 1 }))[0];
+  if (!hit) return toast("찾지 못했어요. 동네 이름으로 이동한 뒤 지도를 움직여 보세요");
+  pickerMap.setCenter(new kakao.maps.LatLng(Number(hit.y), Number(hit.x)));
+  pickerMap.setLevel(byAddress ? 2 : 3);
+}
+
+$("#place-pick").onclick = openPicker;
+$("#pk-go").onclick = pickerGo;
+$("#pk-q").onkeydown = (e) => {
+  if (e.key === "Enter" && !e.isComposing) { e.preventDefault(); pickerGo(); }
+};
+$("#pk-locate").onclick = async () => {
+  try {
+    const { lat, lng } = await getMyLocation();
+    pickerMap.setCenter(new kakao.maps.LatLng(lat, lng));
+    pickerMap.setLevel(2);
+  } catch (e) { toast(e.message); }
+};
+$("#pk-ok").onclick = () => {
+  const name = $("#pk-name").value.trim();
+  if (!name) { $("#pk-name").focus(); return toast("가게 이름을 적어주세요"); }
+  const c = pickerMap.getCenter();
+  const lat = c.getLat(), lng = c.getLng();
+  state.form.place = {
+    id: "c" + crypto.randomUUID().replace(/-/g, "").slice(0, 16),
+    name,
+    category: "직접 등록",
+    address: pickerDialog.dataset.addr ?? "",
+    roadAddress: pickerDialog.dataset.road ?? "",
+    lat,
+    lng,
+    url: `https://map.kakao.com/link/map/${encodeURIComponent(name)},${lat},${lng}`,
+    custom: true,
+  };
+  pickerDialog.close();
+  renderPlacePicked();
+};
 
 function showResults(list, emptyText) {
   state.form.results = list;
