@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>냠냠 일기</title>
+  <title>냠냠일기</title>
   <meta name="theme-color" content="#e8743b">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍚</text></svg>">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
@@ -16,16 +16,16 @@
   <section id="setup-screen" class="screen center hidden">
     <div class="login-card">
       <div class="logo-big">🛠️</div>
-      <h1>Firebase 설정이 필요해요</h1>
-      <p><code>js/firebase-config.js</code> 파일에 Firebase 웹 앱 설정값을 넣어주세요. 자세한 방법은 README를 참고하세요.</p>
+      <h1>설정이 필요해요</h1>
+      <p><code>js/config.js</code> 에 Firebase 설정값과 카카오 JavaScript 키를 넣어주세요. 자세한 방법은 README를 참고하세요.</p>
     </div>
   </section>
 
   <section id="login-screen" class="screen center hidden">
     <div class="login-card">
       <div class="logo-big">🍚</div>
-      <h1>냠냠 일기</h1>
-      <p>우리 둘의 음식 기록</p>
+      <h1>냠냠일기</h1>
+      <p>우리 둘의 맛집 지도</p>
       <button id="login-btn" class="btn primary wide">Google로 로그인</button>
     </div>
   </section>
@@ -41,77 +41,85 @@
 
   <div id="app" class="hidden">
     <header class="topbar">
-      <div class="brand">🍚 냠냠 일기</div>
+      <div class="brand">🍚 냠냠일기</div>
       <nav class="tabs">
-        <button class="tab active" data-view="calendar">캘린더</button>
-        <button class="tab" data-view="feed">피드</button>
+        <button class="tab active" data-view="map">지도</button>
+        <button class="tab" data-view="list">리스트</button>
+        <button class="tab" data-view="album">앨범</button>
       </nav>
       <button id="me-btn" class="avatar-btn" title="로그아웃"></button>
     </header>
 
-    <main>
-      <section id="calendar-view">
-        <div>
-          <div class="cal-head">
-            <button id="prev-month" class="icon-btn" aria-label="이전 달">‹</button>
-            <h2 id="month-label"></h2>
-            <button id="next-month" class="icon-btn" aria-label="다음 달">›</button>
-            <button id="today-btn" class="btn small">오늘</button>
-          </div>
-          <div class="cal-weekdays"><span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span></div>
-          <div id="cal-grid" class="cal-grid"></div>
-          <div class="legend"><span><i class="dot"></i> 내 기록</span><span><i class="dot partner"></i> 상대 기록</span></div>
-        </div>
-        <div class="day-panel">
-          <div class="day-panel-head">
-            <h3 id="day-label"></h3>
-            <button id="add-for-day" class="btn small primary">+ 기록</button>
-          </div>
-          <div id="day-list"></div>
-        </div>
-      </section>
+    <section id="map-view" class="view">
+      <div id="map"></div>
+      <div id="map-summary" class="map-summary"></div>
+      <div id="map-empty" class="map-empty hidden">아직 기록한 맛집이 없어요<br><b>+</b> 버튼으로 첫 맛집을 남겨보세요 🍜</div>
+    </section>
 
-      <section id="feed-view" class="hidden">
-        <div id="feed-list" class="feed"></div>
-        <button id="feed-more" class="btn wide feed-more hidden">더 보기</button>
-      </section>
+    <main id="list-view" class="view page hidden">
+      <div class="toolbar">
+        <h2>방문 기록</h2>
+        <div class="seg"><button data-group="month">월별</button><button data-group="year">연도별</button></div>
+      </div>
+      <div id="list"></div>
     </main>
 
-    <button id="fab" class="fab" aria-label="기록 추가">+</button>
+    <main id="album-view" class="view page hidden">
+      <div class="toolbar">
+        <h2>앨범</h2>
+        <div class="seg"><button data-group="month">월별</button><button data-group="year">연도별</button></div>
+      </div>
+      <div id="album"></div>
+    </main>
+
+    <button id="fab" class="fab" aria-label="맛집 기록 추가">+</button>
   </div>
 
-  <dialog id="entry-dialog">
-    <form id="entry-form">
-      <h2 id="entry-heading">기록 추가</h2>
-      <label class="photo-pick">
-        <input type="file" id="photo-input" accept="image/*" hidden>
-        <img id="photo-preview" alt="" hidden>
-        <span id="photo-placeholder">📷 사진 선택</span>
-      </label>
-      <div class="row">
-        <label>날짜 <input type="date" id="f-date" required></label>
-        <label>식사
-          <select id="f-meal">
-            <option>아침</option><option>점심</option><option>저녁</option><option>간식</option><option>야식</option>
-          </select>
-        </label>
+  <!-- 방문 기록 추가/수정 -->
+  <dialog id="form-dialog">
+    <form id="visit-form" class="sheet">
+      <button type="button" class="close-x" data-close aria-label="닫기">✕</button>
+      <h2 id="form-title">맛집 기록</h2>
+
+      <div class="field">사진 <span id="photo-hint" class="hint"></span>
+        <div id="photo-strip" class="photo-strip"></div>
       </div>
-      <label>메뉴 <input id="f-title" maxlength="60" placeholder="예) 김치찌개" required></label>
-      <label>장소 <input id="f-place" maxlength="60" placeholder="집, 식당 이름 등 (선택)"></label>
-      <div class="field">별점
-        <span id="f-rating" class="rating-input">
-          <button type="button" data-v="1">★</button><button type="button" data-v="2">★</button><button type="button" data-v="3">★</button><button type="button" data-v="4">★</button><button type="button" data-v="5">★</button>
-        </span>
+
+      <div class="field">가게
+        <div id="place-picked" class="place-picked hidden"></div>
+        <div id="place-search">
+          <div class="search-row">
+            <input id="place-q" placeholder="가게 이름 검색 (예: 을지로 노가리)" enterkeyhint="search" autocomplete="off">
+            <button type="button" id="place-go" class="btn small">검색</button>
+          </div>
+          <div id="place-results" class="place-results"></div>
+        </div>
       </div>
-      <label>메모 <textarea id="f-memo" rows="3" maxlength="1000" placeholder="맛, 같이 먹은 사람, 그날의 기분…"></textarea></label>
+
+      <label>날짜 <input type="date" id="f-date" required></label>
+
+      <div class="field">메뉴 · 가격
+        <div id="menu-rows"></div>
+        <div class="menu-foot">
+          <button type="button" id="menu-add" class="link">+ 메뉴 추가</button>
+          <span id="menu-total"></span>
+        </div>
+      </div>
+
+      <div class="field">내 평점 · 후기
+        <span id="f-rating" class="rating-input" data-value="0"></span>
+        <textarea id="f-review" rows="3" maxlength="500" placeholder="맛은 어땠어요? 또 올 거예요?"></textarea>
+      </div>
+
       <div class="form-actions">
-        <button type="button" id="entry-cancel" class="btn">취소</button>
-        <button type="submit" id="entry-save" class="btn primary">저장</button>
+        <button type="button" class="btn" data-close>취소</button>
+        <button type="submit" id="form-save" class="btn primary">저장</button>
       </div>
     </form>
   </dialog>
 
-  <dialog id="detail-dialog"></dialog>
+  <dialog id="visit-dialog"></dialog>
+  <dialog id="place-dialog"></dialog>
 
   <div id="toast" popover="manual"></div>
 </body>

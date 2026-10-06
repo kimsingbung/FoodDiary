@@ -1,46 +1,45 @@
 rules_version = '2';
 
 // Firebase 콘솔 → Firestore Database → 규칙 탭에 이 내용을 그대로 붙여넣고 "게시"하세요.
-// 아래 목록에 있는 구글 계정만 사이트의 데이터를 읽고 쓸 수 있습니다.
+// members() 에 있는 구글 계정만 데이터를 읽고 쓸 수 있습니다. (js/config.js 의 MEMBERS 와 똑같이)
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    function members() {
+      return {
+        'me@gmail.com': 'a',       // ← 내 구글 이메일 (소문자)
+        'friend@gmail.com': 'b'    // ← 같이 쓸 사람 구글 이메일 (소문자)
+      };
+    }
 
     function allowed() {
       return request.auth != null
         && request.auth.token.email_verified == true
-        && request.auth.token.email in [
-          'me@gmail.com',       // ← 내 구글 이메일로 바꾸기
-          'friend@gmail.com'    // ← 같이 쓸 사람 구글 이메일로 바꾸기
-        ];
+        && request.auth.token.email in members();
     }
 
-    match /meals/{mealId} {
-      allow read: if allowed();
-      allow create: if allowed() && request.resource.data.uid == request.auth.uid;
-      // 작성자는 전부 수정 가능, 상대는 좋아요/댓글 수만 바꿀 수 있음
-      allow update: if allowed() && (
-        (resource.data.uid == request.auth.uid && request.resource.data.uid == request.auth.uid)
-        || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'commentCount'])
-      );
-      allow delete: if allowed() && resource.data.uid == request.auth.uid;
-
-      match /comments/{commentId} {
-        allow read: if allowed();
-        allow create: if allowed() && request.resource.data.uid == request.auth.uid;
-        // 댓글 작성자 또는 글 작성자가 삭제 가능
-        allow delete: if allowed() && (
-          resource.data.uid == request.auth.uid
-          || get(/databases/$(database)/documents/meals/$(mealId)).data.uid == request.auth.uid
-        );
-      }
+    function me() {
+      return members()[request.auth.token.email];
     }
 
-    match /photos/{mealId} {
-      allow read: if allowed();
-      allow create: if allowed() && request.resource.data.uid == request.auth.uid;
-      allow update: if allowed() && resource.data.uid == request.auth.uid
-        && request.resource.data.uid == request.auth.uid;
-      allow delete: if allowed() && (resource == null || resource.data.uid == request.auth.uid);
+    // 가게(지도 핀): 두 사람 모두 추가/수정/삭제 가능
+    match /places/{placeId} {
+      allow read, write: if allowed();
+    }
+
+    // 방문 기록: 두 사람 모두 수정 가능, 단 후기(reviews)는 본인 것만
+    match /visits/{visitId} {
+      allow read, delete: if allowed();
+      allow create: if allowed()
+        && request.resource.data.get('reviews', {}).keys().hasOnly([me()]);
+      allow update: if allowed()
+        && request.resource.data.get('reviews', {})
+             .diff(resource.data.get('reviews', {})).affectedKeys().hasOnly([me()]);
+    }
+
+    // 원본 사진
+    match /photos/{photoId} {
+      allow read, create, delete: if allowed();
     }
   }
 }
